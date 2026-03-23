@@ -1,325 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SURFseq Report Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
 <style>
 /* ── RESET ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:       #080d17;
-  --surface:  #0f1724;
-  --surf2:    #162032;
-  --border:   #1e2e46;
-  --accent:   #38bdf8;
-  --text:     #dde6f0;
-  --muted:    #4e6580;
-  --danger:   #f87171;
-  --success:  #34d399;
-  --warn:     #fbbf24;
-  --font-h:   'Syne', sans-serif;
-  --font-m:   'DM Mono', monospace;
-  --r:        7px;
-  --sh:       0 8px 40px rgba(0,0,0,.55);
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow-x:auto}
+:root{
+  --bg:#080d17;--surf:#0f1724;--surf2:#162032;--border:#1e2e46;
+  --accent:#38bdf8;--text:#dde6f0;--muted:#4e6580;
+  --danger:#f87171;--ok:#34d399;--warn:#fbbf24;
+  --run-bg:#0d1e35;--run-border:#2a4a7f;--run-text:#7eb8f7;
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+  --r:7px;--sh:0 8px 40px rgba(0,0,0,.55)
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fm);font-size:12.5px;min-height:100vh}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(56,189,248,.016) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(56,189,248,.016) 1px,transparent 1px);
+  background-size:40px 40px
 }
 
-/* ── KEY FIX: body must NOT have overflow-x:hidden — that was
-   clipping the horizontally-scrollable table wrapper          */
-html, body {
-  height: 100%;
-  overflow-x: auto;   /* allow page-level horizontal scroll if needed */
+/* ── NAVBAR ─────────────────────────────────────────────── */
+.navbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:0 24px;height:54px;
+  background:rgba(8,13,23,.96);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border)
 }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-m);
-  font-size: 12.5px;
-  min-height: 100vh;
+.brand{font-family:var(--fh);font-size:17px;font-weight:800;letter-spacing:-.4px;
+  color:var(--accent);display:flex;align-items:center;gap:9px;white-space:nowrap}
+.brand em{color:var(--text);font-style:normal}
+.nav-r{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.badge{font-size:10px;letter-spacing:.06em;padding:3px 10px;border-radius:20px;
+  background:var(--surf2);border:1px solid var(--border);color:var(--muted);text-transform:uppercase}
+.badge.admin{border-color:var(--accent);color:var(--accent)}
+
+/* ── BUTTONS ────────────────────────────────────────────── */
+button{cursor:pointer;font-family:var(--fm);font-size:11.5px;border:none;
+  border-radius:var(--r);padding:7px 15px;transition:all .14s;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px}
+.bg  {background:transparent;color:var(--muted);border:1px solid var(--border)}
+.bg:hover{border-color:var(--accent);color:var(--accent)}
+.ba  {background:var(--accent);color:#000;font-weight:600}
+.ba:hover{background:#7dd3fc}
+.bk  {background:var(--ok);color:#000;font-weight:600}
+.bk:hover{background:#6ee7b7}
+.bd  {background:transparent;color:var(--danger);border:1px solid rgba(248,113,113,.22)}
+.bd:hover{background:rgba(248,113,113,.1)}
+.be  {background:transparent;color:var(--accent);border:1px solid rgba(56,189,248,.2)}
+.be:hover{background:rgba(56,189,248,.08)}
+.bsm{padding:4px 10px;font-size:10.5px}
+button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* ── MODALS ─────────────────────────────────────────────── */
+.ov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.78);
+  backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center}
+.ov.off{display:none}
+@keyframes pop{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.modal{background:var(--surf);border:1px solid var(--border);border-radius:14px;
+  padding:30px 32px;width:430px;max-width:calc(100vw - 32px);
+  box-shadow:var(--sh);animation:pop .22s ease;max-height:90vh;overflow-y:auto}
+.modal h2{font-family:var(--fh);font-size:20px;font-weight:700;margin-bottom:4px}
+.modal .sub{color:var(--muted);font-size:11.5px;margin-bottom:20px;line-height:1.5}
+.fg{margin-bottom:13px}
+.fg label{display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.05em;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{
+  width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);
+  color:var(--text);font-family:var(--fm);font-size:12.5px;padding:9px 13px;outline:none;
+  transition:border-color .14s;resize:vertical}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent)}
+.mac{display:flex;gap:10px;margin-top:20px}
+.mac button{flex:1;padding:10px;font-size:12.5px;justify-content:center}
+.err{color:var(--danger);font-size:11px;margin-top:8px;min-height:16px}
+.ibox{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px;margin-bottom:16px;font-size:12px;line-height:1.9}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.container{position:relative;z-index:1;padding:20px 24px 32px}
+
+/* ── STATS ──────────────────────────────────────────────── */
+.stats{display:flex;gap:11px;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
+  padding:9px 18px;display:flex;align-items:baseline;gap:10px}
+.sn{font-family:var(--fh);font-size:21px;font-weight:700}
+.sl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.sa .sn{color:var(--accent)}.sr .sn{color:var(--ok)}.st .sn{color:var(--warn)}
+
+/* ── TOOLBAR ────────────────────────────────────────────── */
+.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.sw{position:relative;width:280px;flex-shrink:0}
+.sw input{width:100%;background:var(--surf);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:var(--fm);font-size:12px;
+  padding:8px 13px 8px 33px;outline:none;transition:border-color .14s}
+.sw input:focus{border-color:var(--accent)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  color:var(--muted);pointer-events:none;font-size:14px;line-height:1}
+.tw{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);
+  cursor:pointer;user-select:none}
+.tw input{display:none}
+.tt{width:38px;height:20px;background:var(--surf2);border:1px solid var(--border);
+  border-radius:10px;position:relative;transition:background .16s,border-color .16s;flex-shrink:0}
+.tw input:checked+.tt{background:var(--accent);border-color:var(--accent)}
+.tt::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;
+  background:#fff;top:2px;left:2px;transition:transform .16s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.tw input:checked+.tt::after{transform:translateX(18px)}
+.tspc{flex:1}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--ok);
+  display:inline-block;animation:blink 2.4s ease infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse.sync{background:var(--warn);animation:blink .6s ease infinite}
+.rlbl{font-size:11px;color:var(--muted)}
+
+/* ── TABLE WRAP ─────────────────────────────────────────── */
+.twrap{width:100%;overflow-x:auto;overflow-y:visible;
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:11px;box-shadow:var(--sh);-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+thead tr{background:var(--surf2);border-bottom:2px solid var(--border)}
+th{font-family:var(--fh);font-size:10.5px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);padding:11px 14px;text-align:left;white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid rgba(30,46,70,.6);
+  vertical-align:middle;white-space:nowrap}
+tbody tr{transition:background .1s}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(56,189,248,.03)}
+
+/* Run header rows */
+tr.run-hdr td{
+  background:var(--run-bg);
+  color:var(--run-text);
+  font-family:var(--fh);font-size:13px;font-weight:700;
+  letter-spacing:.04em;
+  padding:10px 16px;
+  border-bottom:2px solid var(--run-border);
+  border-top:2px solid var(--run-border)
+}
+tr.run-hdr td span.run-pill{
+  display:inline-block;background:rgba(56,189,248,.12);
+  border:1px solid rgba(56,189,248,.3);border-radius:5px;
+  padding:2px 10px;font-size:11px;margin-left:10px;
+  color:var(--accent);letter-spacing:.05em
 }
 
-/* Subtle grid */
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(56,189,248,.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,189,248,.018) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── NAVBAR ──────────────────────────────────────────────── */
-.navbar {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 0 24px; height: 54px;
-  background: rgba(8,13,23,.96);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-}
-.brand {
-  font-family: var(--font-h); font-size: 17px; font-weight: 800;
-  letter-spacing: -.4px; color: var(--accent);
-  display: flex; align-items: center; gap: 9px; white-space: nowrap;
-}
-.brand em { color: var(--text); font-style: normal; }
-.nav-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.badge {
-  font-size: 10px; letter-spacing: .06em; padding: 3px 10px;
-  border-radius: 20px; background: var(--surf2); border: 1px solid var(--border);
-  color: var(--muted); text-transform: uppercase;
-}
-.badge.admin { border-color: var(--accent); color: var(--accent); }
-
-/* ── BUTTONS ─────────────────────────────────────────────── */
-button {
-  cursor: pointer; font-family: var(--font-m); font-size: 11.5px;
-  border: none; border-radius: var(--r); padding: 7px 15px;
-  transition: all .14s; white-space: nowrap; display: inline-flex;
-  align-items: center; gap: 5px;
-}
-.btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-.btn-accent  { background: var(--accent); color: #000; font-weight: 600; }
-.btn-accent:hover { background: #7dd3fc; }
-.btn-green   { background: var(--success); color: #000; font-weight: 600; }
-.btn-green:hover { background: #6ee7b7; }
-.btn-danger  { background: transparent; color: var(--danger); border: 1px solid rgba(248,113,113,.22); }
-.btn-danger:hover { background: rgba(248,113,113,.1); }
-.btn-edit    { background: transparent; color: var(--accent); border: 1px solid rgba(56,189,248,.2); }
-.btn-edit:hover { background: rgba(56,189,248,.08); }
-.btn-sm { padding: 4px 10px; font-size: 10.5px; }
-button:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-
-/* ── MODALS ──────────────────────────────────────────────── */
-.overlay {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,.78); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-}
-.overlay.off { display: none; }
-
-@keyframes pop {
-  from { transform: translateY(16px) scale(.97); opacity: 0; }
-  to   { transform: none; opacity: 1; }
-}
-.modal {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 30px 32px;
-  width: 420px; max-width: calc(100vw - 32px);
-  box-shadow: var(--sh); animation: pop .22s ease;
-  max-height: 90vh; overflow-y: auto;
-}
-.modal h2 { font-family: var(--font-h); font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-.modal .sub { color: var(--muted); font-size: 11.5px; margin-bottom: 22px; line-height: 1.5; }
-
-.fgroup { margin-bottom: 13px; }
-.fgroup label {
-  display: block; color: var(--muted); font-size: 10.5px;
-  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px;
-}
-.fgroup input, .fgroup select, .fgroup textarea {
-  width: 100%; background: var(--surf2); border: 1px solid var(--border);
-  border-radius: var(--r); color: var(--text); font-family: var(--font-m);
-  font-size: 12.5px; padding: 9px 13px; outline: none;
-  transition: border-color .14s; resize: vertical;
-}
-.fgroup input:focus, .fgroup select:focus, .fgroup textarea:focus { border-color: var(--accent); }
-.mactions { display: flex; gap: 10px; margin-top: 20px; }
-.mactions button { flex: 1; padding: 10px; font-size: 12.5px; justify-content: center; }
-.err { color: var(--danger); font-size: 11px; margin-top: 8px; min-height: 16px; }
-.info-box {
-  background: var(--surf2); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 13px; margin-bottom: 16px; font-size: 12px; line-height: 1.9;
-}
-
-/* ── PAGE LAYOUT ─────────────────────────────────────────── */
-.container { position: relative; z-index: 1; padding: 20px 24px 32px; }
-
-/* ── STATS ───────────────────────────────────────────────── */
-.stats { display: flex; gap: 11px; margin-bottom: 16px; flex-wrap: wrap; }
-.stat {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 9px 18px;
-  display: flex; align-items: baseline; gap: 10px;
-}
-.stat-n { font-family: var(--font-h); font-size: 21px; font-weight: 700; }
-.stat-l { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
-.stat.s-a  .stat-n { color: var(--accent); }
-.stat.s-r  .stat-n { color: var(--success); }
-.stat.s-t  .stat-n { color: var(--warn); }
-
-/* ── TOOLBAR ─────────────────────────────────────────────── */
-.toolbar {
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: 10px; margin-bottom: 14px;
-}
-.search-wrap { position: relative; width: 280px; flex-shrink: 0; }
-.search-wrap input {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); color: var(--text); font-family: var(--font-m);
-  font-size: 12px; padding: 8px 13px 8px 33px; outline: none;
-  transition: border-color .14s;
-}
-.search-wrap input:focus { border-color: var(--accent); }
-.search-ico {
-  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-  color: var(--muted); pointer-events: none; font-size: 14px; line-height: 1;
-}
-.tog-wrap {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12px; color: var(--text); cursor: pointer; user-select: none;
-}
-.tog-wrap input { display: none; }
-.tog-track {
-  width: 38px; height: 20px; background: var(--surf2);
-  border: 1px solid var(--border); border-radius: 10px;
-  position: relative; transition: background .16s, border-color .16s; flex-shrink: 0;
-}
-.tog-wrap input:checked + .tog-track { background: var(--accent); border-color: var(--accent); }
-.tog-track::after {
-  content: ''; position: absolute;
-  width: 14px; height: 14px; border-radius: 50%; background: #fff;
-  top: 2px; left: 2px; transition: transform .16s;
-  box-shadow: 0 1px 3px rgba(0,0,0,.4);
-}
-.tog-wrap input:checked + .tog-track::after { transform: translateX(18px); }
-.toolbar-spacer { flex: 1; }
-
-/* Pulse */
-.pulse {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--success); display: inline-block;
-  animation: blink 2.4s ease infinite;
-}
-@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
-@keyframes spin { to { transform: rotate(360deg); } }
-.pulse.syncing {
-  background: var(--warn); border-radius: 50%;
-  animation: blink .6s ease infinite;
-}
-.refresh-lbl { font-size: 11px; color: var(--muted); }
-
-/* ── TABLE WRAPPER ───────────────────────────────────────── */
-/* FIX: width:100% + overflow-x:auto so the table scrolls
-   horizontally inside the card instead of being clipped.
-   Do NOT set max-width or overflow:hidden here.              */
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;           /* ← horizontal scroll lives HERE */
-  overflow-y: visible;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  box-shadow: var(--sh);
-  -webkit-overflow-scrolling: touch;
-}
-
-/* table has no min-width cap — it expands to fit ALL columns */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;         /* ← auto so each column sizes to content */
-}
-
-thead tr { background: var(--surf2); border-bottom: 2px solid var(--border); }
-th {
-  font-family: var(--font-h); font-size: 10.5px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .07em;
-  color: var(--muted); padding: 11px 14px;
-  text-align: left; white-space: nowrap;
-}
-
-/* FIX: removed max-width:180px and overflow:hidden from td —
-   those were the main cause of cut-off columns.
-   Cells now wrap naturally; only action column is nowrap.    */
-td {
-  padding: 8px 14px;
-  border-bottom: 1px solid rgba(30,46,70,.6);
-  vertical-align: middle;
-  white-space: nowrap;       /* keep each cell on one line for readability */
-}
-/* Long-text cells get a soft cap with tooltip via title attr */
-td.td-clip {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-tbody tr { transition: background .1s; }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: rgba(56,189,248,.03); }
+/* Column sub-header rows (repeated per run) */
+tr.col-hdr th{background:#111f35;color:#5a8ab0;font-size:10px;padding:7px 14px}
 
 /* Released rows */
-tbody tr.released { background: rgba(4,47,46,.4); }
-tbody tr.released td { color: #6ee7b7; border-bottom-color: rgba(52,211,153,.1); }
-tbody tr.released td:first-child { border-left: 3px solid rgba(52,211,153,.5); }
-tbody tr.released:hover { background: rgba(4,47,46,.58); }
+tbody tr.released{background:rgba(4,47,46,.4)}
+tbody tr.released td{color:#6ee7b7;border-bottom-color:rgba(52,211,153,.1)}
+tbody tr.released td:first-child{border-left:3px solid rgba(52,211,153,.5)}
+tbody tr.released:hover{background:rgba(4,47,46,.58)}
 
 /* Inline edit */
-td.editing { padding: 3px 5px; }
-td.editing input {
-  width: 100%; min-width: 80px;
-  background: #0a1929; border: 1px solid var(--accent);
-  border-radius: 4px; color: var(--text);
-  font-family: var(--font-m); font-size: 12px;
-  padding: 5px 8px; outline: none;
-}
+td.editing{padding:3px 5px}
+td.editing input{width:100%;min-width:80px;background:#0a1929;
+  border:1px solid var(--accent);border-radius:4px;color:var(--text);
+  font-family:var(--fm);font-size:12px;padding:5px 8px;outline:none}
 
-/* Badges / pills */
-.hidden-badge {
-  display: inline-block; font-size: 9px;
-  background: rgba(52,211,153,.15); color: var(--success);
-  border: 1px solid rgba(52,211,153,.35); border-radius: 4px;
-  padding: 1px 6px; margin-left: 5px; vertical-align: middle;
-  letter-spacing: .04em; white-space: nowrap;
-}
-.act-cell { display: flex; gap: 5px; align-items: center; }
+.hbadge{display:inline-block;font-size:9px;background:rgba(52,211,153,.15);
+  color:var(--ok);border:1px solid rgba(52,211,153,.35);border-radius:4px;
+  padding:1px 6px;margin-left:5px;vertical-align:middle;letter-spacing:.04em;white-space:nowrap}
+.actc{display:flex;gap:5px;align-items:center}
 
 /* State / spinner */
-.state-cell { text-align: center; padding: 60px 20px; color: var(--muted); }
-.spinner {
-  display: inline-block; width: 22px; height: 22px;
-  border: 2px solid var(--border); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 12px;
-}
+.sc{text-align:center;padding:60px 20px;color:var(--muted)}
+.spinner{display:inline-block;width:22px;height:22px;
+  border:2px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px}
 
-/* Add-row footer */
-.add-row-btn {
-  display: flex; align-items: center; justify-content: center;
-  gap: 6px; width: 100%; padding: 10px;
-  border-top: 1px dashed var(--border);
-  background: transparent; border-radius: 0 0 11px 11px;
-  color: var(--muted); font-size: 12px;
-  transition: color .14s, background .14s; cursor: pointer;
-}
-.add-row-btn:hover { background: rgba(56,189,248,.04); color: var(--accent); }
+/* Add row footer */
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:10px;border-top:1px dashed var(--border);
+  background:transparent;border-radius:0 0 11px 11px;
+  color:var(--muted);font-size:12px;transition:color .14s,background .14s;cursor:pointer}
+.add-btn:hover{background:rgba(56,189,248,.04);color:var(--accent)}
 
-/* ── TOASTS ──────────────────────────────────────────────── */
-#toasts {
-  position: fixed; bottom: 20px; right: 20px; z-index: 999;
-  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
-}
-.toast {
-  background: var(--surf2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 11px 16px; font-size: 12px;
-  min-width: 210px; display: flex; align-items: center; gap: 9px;
-  animation: pop .2s ease; pointer-events: all; box-shadow: var(--sh);
-}
-.toast.ok  { border-left: 3px solid var(--success); }
-.toast.err { border-left: 3px solid var(--danger); }
-
-/* Release button in-progress state */
-.btn-releasing {
-  background: rgba(52,211,153,.15) !important;
-  color: var(--success) !important;
-  border: 1px solid rgba(52,211,153,.4) !important;
-  animation: blink .8s ease infinite;
-}
+/* ── TOASTS ─────────────────────────────────────────────── */
+#toasts{position:fixed;bottom:20px;right:20px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 16px;font-size:12px;min-width:210px;
+  display:flex;align-items:center;gap:9px;animation:pop .2s ease;
+  pointer-events:all;box-shadow:var(--sh)}
+.toast.ok{border-left:3px solid var(--ok)}
+.toast.err{border-left:3px solid var(--danger)}
 </style>
 </head>
 <body>
@@ -332,589 +204,729 @@ td.editing input {
     </svg>
     SURF<em>seq</em>&thinsp;Portal
   </div>
-  <div class="nav-right">
-    <span id="pulseEl" class="pulse"></span>
-    <span id="refreshLbl" class="refresh-lbl">Connecting…</span>
-    <span id="userBadge" class="badge">GUEST</span>
-    <button id="authBtn" class="btn-ghost btn-sm" onclick="openLogin()">Admin Login</button>
+  <div class="nav-r">
+    <span id="pulse" class="pulse"></span>
+    <span id="rlbl" class="rlbl">Connecting…</span>
+    <span id="ubadge" class="badge">GUEST</span>
+    <button id="authBtn" class="bg bsm" onclick="openLogin()">Admin Login</button>
   </div>
 </nav>
 
-<!-- ── LOGIN MODAL ─────────────────────────────────────── -->
-<div id="loginOverlay" class="overlay off">
+<!-- ── LOGIN ─────────────────────────────────────────────── -->
+<div id="loginOv" class="ov off">
   <div class="modal">
-    <h2>Admin Login</h2>
-    <p class="sub">Enter credentials to manage report releases</p>
-    <div class="fgroup"><label>Admin ID</label>
-      <input id="lid" type="text" autocomplete="off" placeholder="username" />
-    </div>
-    <div class="fgroup"><label>Password</label>
-      <input id="lpw" type="password" placeholder="password" />
-    </div>
+    <h2>Admin Login</h2><p class="sub">Enter credentials to manage report releases</p>
+    <div class="fg"><label>Admin ID</label><input id="lid" type="text" autocomplete="off" placeholder="username"/></div>
+    <div class="fg"><label>Password</label><input id="lpw" type="password" placeholder="password"/></div>
     <div id="lerr" class="err"></div>
-    <div class="mactions">
-      <button class="btn-ghost" onclick="closeLogin()">Cancel</button>
-      <button class="btn-accent" onclick="doLogin()">Login</button>
+    <div class="mac">
+      <button class="bg" onclick="closeLogin()">Cancel</button>
+      <button class="ba" onclick="doLogin()">Login</button>
     </div>
   </div>
 </div>
 
-<!-- ── RELEASE MODAL ───────────────────────────────────── -->
-<div id="relOverlay" class="overlay off">
+<!-- ── RELEASE ────────────────────────────────────────────── -->
+<div id="relOv" class="ov off">
   <div class="modal">
-    <h2>Mark as Released</h2>
-    <p class="sub">Sets the Release Date in the sheet and hides the row.</p>
-    <div id="relInfo" class="info-box">—</div>
-    <div class="fgroup"><label>Report Release Date</label>
-      <input id="relDate" type="date" />
-    </div>
+    <h2>Mark as Released</h2><p class="sub">Sets the Release Date in the sheet and hides the row.</p>
+    <div id="relInfo" class="ibox">—</div>
+    <div class="fg"><label>Report Release Date</label><input id="relDate" type="date"/></div>
     <div id="relerr" class="err"></div>
-    <div class="mactions">
-      <button class="btn-ghost" onclick="closeRelease()">Cancel</button>
-      <button id="relConfirmBtn" class="btn-green" onclick="confirmRelease()">✓ Confirm Release</button>
+    <div class="mac">
+      <button class="bg" onclick="closeRelease()">Cancel</button>
+      <button id="relBtn" class="bk" onclick="confirmRelease()">✓ Confirm Release</button>
     </div>
   </div>
 </div>
 
-<!-- ── ADD ROW MODAL ───────────────────────────────────── -->
-<div id="addOverlay" class="overlay off">
-  <div class="modal" style="width:520px">
-    <h2>Add New Row</h2>
-    <p class="sub">Fill in the fields. Leave blank for empty cells.</p>
+<!-- ── ADD ROW ────────────────────────────────────────────── -->
+<div id="addOv" class="ov off">
+  <div class="modal" style="width:540px">
+    <h2>Add New Row</h2><p class="sub">Fill in the fields. Leave blank for empty cells.</p>
     <div id="addFields"></div>
     <div id="adderr" class="err"></div>
-    <div class="mactions">
-      <button class="btn-ghost" onclick="closeAdd()">Cancel</button>
-      <button class="btn-accent" onclick="confirmAdd()">＋ Add Row</button>
+    <div class="mac">
+      <button class="bg" onclick="closeAdd()">Cancel</button>
+      <button class="ba" onclick="confirmAdd()">＋ Add Row</button>
     </div>
   </div>
 </div>
 
-<!-- ── DELETE CONFIRM MODAL ────────────────────────────── -->
-<div id="delOverlay" class="overlay off">
+<!-- ── DELETE ─────────────────────────────────────────────── -->
+<div id="delOv" class="ov off">
   <div class="modal" style="width:360px">
-    <h2>Delete Row?</h2>
-    <p class="sub">Permanently removes the row from Google Sheets. Cannot be undone.</p>
-    <div id="delInfo" class="info-box">—</div>
+    <h2>Delete Row?</h2><p class="sub">Permanently removes from Google Sheets. Cannot be undone.</p>
+    <div id="delInfo" class="ibox">—</div>
     <div id="delerr" class="err"></div>
-    <div class="mactions">
-      <button class="btn-ghost" onclick="closeDel()">Cancel</button>
-      <button class="btn-danger" style="flex:1;padding:10px;justify-content:center" onclick="confirmDelete()">Delete</button>
+    <div class="mac">
+      <button class="bg" onclick="closeDel()">Cancel</button>
+      <button class="bd" style="flex:1;padding:10px;justify-content:center" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
 </div>
 
-<!-- ── TOASTS ───────────────────────────────────────────── -->
 <div id="toasts"></div>
 
-<!-- ── MAIN ────────────────────────────────────────────── -->
+<!-- ── MAIN ──────────────────────────────────────────────── -->
 <div class="container">
-
-  <!-- Stats -->
   <div class="stats">
-    <div class="stat s-a"><span class="stat-n" id="sActive">—</span><span class="stat-l">Unreleased</span></div>
-    <div class="stat s-r"><span class="stat-n" id="sReleased">—</span><span class="stat-l">Released</span></div>
-    <div class="stat s-t"><span class="stat-n" id="sTotal">—</span><span class="stat-l">Total</span></div>
+    <div class="stat sa"><span class="sn" id="sA">—</span><span class="sl">Unreleased</span></div>
+    <div class="stat sr"><span class="sn" id="sR">—</span><span class="sl">Released</span></div>
+    <div class="stat st"><span class="sn" id="sT">—</span><span class="sl">Total</span></div>
   </div>
-
-  <!-- Toolbar -->
   <div class="toolbar">
-    <div class="search-wrap">
-      <span class="search-ico">⌕</span>
-      <input id="searchBox" type="text" placeholder="Search ID, name, client…" oninput="renderTable()" />
+    <div class="sw">
+      <span class="si">⌕</span>
+      <input id="qbox" type="text" placeholder="Search ID, name, client…" oninput="renderTable()"/>
     </div>
-    <label class="tog-wrap">
-      <input type="checkbox" id="togReleased" onchange="renderTable()" />
-      <span class="tog-track"></span>
-      Show Released
+    <label class="tw">
+      <input type="checkbox" id="togRel" onchange="renderTable()"/>
+      <span class="tt"></span>Show Released
     </label>
-    <div class="toolbar-spacer"></div>
+    <div class="tspc"></div>
   </div>
-
-  <!-- Table -->
-  <div class="table-wrap">
-    <table>
-      <thead id="tHead"></thead>
-      <tbody id="tBody">
-        <tr><td class="state-cell" colspan="20">
-          <div class="spinner"></div><br>Loading…
-        </td></tr>
-      </tbody>
+  <div class="twrap">
+    <table><thead id="tHead"></thead>
+    <tbody id="tBody"><tr><td class="sc" colspan="30"><div class="spinner"></div><br>Loading…</td></tr></tbody>
     </table>
-    <button class="add-row-btn" onclick="openAdd()">＋ Add new row</button>
+    <button class="add-btn" onclick="openAdd()">＋ Add new row</button>
   </div>
-
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════════
-//  CONFIG — paste your Apps Script deployed URL here
+//  ▼▼ CONFIGURE THESE THREE VALUES ▼▼
 // ══════════════════════════════════════════════════════════
-var API = "https://script.google.com/macros/s/AKfycbzioALRQDTRrYnUwXsRzX6rUuiYV1TR127w_1mE9jHLY6tWC4mDNJHX006u9XnA95V6Pw/exec";
+var SHEET_ID   = "YOUR_SPREADSHEET_ID_HERE";
+  // The long ID from your sheet URL:
+  // docs.google.com/spreadsheets/d/ >>>THIS_PART<<< /edit
 
+var SHEETS_API_KEY = "YOUR_SHEETS_API_V4_KEY_HERE";
+  // Read-only API key from Google Cloud Console
+  // (Sheets API v4 must be enabled, key restricted to Sheets API)
+
+var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzioALRQDTRrYnUwXsRzX6rUuiYV1TR127w_1mE9jHLY6tWC4mDNJHX006u9XnA95V6Pw/exec";
+  // Your Apps Script /exec URL (write-only backend)
+
+var SHEET_NAME  = "Sheet1";
+var REFRESH_MS  = 30000; // 30-second background refresh
 // ══════════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════════
+
+// ── STATE ─────────────────────────────────────────────────
 var S = {
   isAdmin     : false,
   token       : null,
-  headers     : [],
-  rows        : [],
+  runs        : [],    // [ { runName, headers, rows[] } ]
+  allHeaders  : [],    // merged unique headers across all runs
   pending     : null,
-  orphanFixed : false,  // true after first orphan-fix pass per session
+  orphanFixed : false,
 };
-var REFRESH_MS = 30000;
 
-// ══════════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════════
-document.addEventListener("DOMContentLoaded", function () {
+// ── BOOT ──────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("lpw").addEventListener("keydown", function(e){
-    if (e.key === "Enter") doLogin();
+    if(e.key==="Enter") doLogin();
   });
-  document.getElementById("searchBox").addEventListener("keydown", function(e){
-    if (e.key === "Escape") { this.value = ""; renderTable(); }
+  document.getElementById("qbox").addEventListener("keydown", function(e){
+    if(e.key==="Escape"){ this.value=""; renderTable(); }
   });
   fetchData(false);
   setInterval(function(){ fetchData(true); }, REFRESH_MS);
 });
 
 // ══════════════════════════════════════════════════════════
-//  API CALL
-//  - No explicit Content-Type → simple request, no preflight
-//  - AbortController timeout so it never hangs forever
-//  - Strip any Apps Script JSON wrapper before parsing
+//  SHEETS API v4 READ  — direct HTTP, no Apps Script
+//  Latency: ~150-300ms vs 3-8s for Apps Script reads
+//
+//  Sheet structure parsed here:
+//  • Merged single-cell rows → Run name headers
+//  • Rows containing "S.NO" → column headers for that run
+//  • Data rows follow until blank or next run header
+//  • Blank rows between runs are skipped
 // ══════════════════════════════════════════════════════════
-function api(payload, ms) {
-  ms = ms || 25000;
+function fetchData(silent) {
+  var p = document.getElementById("pulse");
+  if (!silent) {
+    document.getElementById("tHead").innerHTML = "";
+    document.getElementById("tBody").innerHTML =
+      '<tr><td class="sc" colspan="30"><div class="spinner"></div><br>Loading from Google Sheets…</td></tr>';
+  }
+  p.classList.add("sync");
+
+  // Sheets API v4 — get all values from Sheet1
+  var url = "https://sheets.googleapis.com/v4/spreadsheets/"
+    + encodeURIComponent(SHEET_ID)
+    + "/values/" + encodeURIComponent(SHEET_NAME)
+    + "?key=" + encodeURIComponent(SHEETS_API_KEY)
+    + "&valueRenderOption=FORMATTED_VALUE"
+    + "&dateTimeRenderOption=FORMATTED_STRING";
+
+  var ctrl  = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 15000);
+
+  fetch(url, { signal: ctrl.signal })
+    .then(function(r){
+      clearTimeout(timer);
+      if(!r.ok) throw new Error("Sheets API HTTP "+r.status+
+        " — check API key, Sheet ID, and that sheet is shared publicly");
+      return r.json();
+    })
+    .then(function(data){
+      p.classList.remove("sync");
+      var raw = data.values || [];
+      if(raw.length === 0){
+        showErr("Sheet appears empty.");
+        return;
+      }
+      S.runs = parseRuns(raw);
+      buildAllHeaders();
+      renderTable();
+      updateStats();
+      var now = new Date();
+      document.getElementById("rlbl").textContent =
+        "Updated "+now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+
+      // Orphan fix: ensure released rows are physically hidden
+      if(S.isAdmin && !S.orphanFixed){
+        S.orphanFixed = true;
+        var orphans = [];
+        S.runs.forEach(function(run){
+          run.rows.forEach(function(row){
+            if(row.__released__ && !row.__hidden__) orphans.push(row.__rowIndex__);
+          });
+        });
+        if(orphans.length){
+          (function seq(i){
+            if(i>=orphans.length) return;
+            writeAPI({action:"fixOrphan",rowIndex:orphans[i],token:S.token})
+              .then(function(){ seq(i+1); }).catch(function(){ seq(i+1); });
+          })(0);
+        }
+      }
+    })
+    .catch(function(e){
+      clearTimeout(timer);
+      p.classList.remove("sync");
+      var msg = e.name==="AbortError"
+        ? "Timed out reading sheet. Check SHEET_ID and API key."
+        : e.message;
+      toast(msg,"err");
+      if(!silent) showErr(msg);
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+//  PARSE RUNS
+//  Walks raw rows from Sheets API and groups them into runs.
+//  Returns: [ { runName, sheetRowStart, headers[], rows[] } ]
+//
+//  Detection rules:
+//  • Run header: row where only col[0] has text, all others
+//    blank (merged cell renders as single populated cell)
+//  • Column header: row containing "S.NO" (case-insensitive)
+//  • Data row: everything else that isn't blank
+//  • Blank row: all cells empty — signals gap between runs
+// ══════════════════════════════════════════════════════════
+function parseRuns(raw) {
+  var runs        = [];
+  var curRun      = null;
+  var curHeaders  = [];
+  var relColIdx   = -1; // index within curHeaders, 0-based
+  var tz          = null; // not needed — API returns formatted strings
+
+  for(var i=0; i<raw.length; i++){
+    var row     = raw[i];
+    var sheetR  = i + 1; // 1-based sheet row number
+
+    // Normalise row to full-width array
+    var maxCols = Math.max(row.length, curHeaders.length, 1);
+    var cells   = [];
+    for(var c=0; c<maxCols; c++) cells.push(row[c]!==undefined ? String(row[c]).trim() : "");
+
+    // ── Blank row ───────────────────────────────────────
+    var allBlank = cells.every(function(v){ return v===""; });
+    if(allBlank) continue;
+
+    // ── Run header detection ─────────────────────────────
+    // A run header is a row where col[0] has a value AND
+    // all other populated cells are empty (merged cell).
+    // Also catches rows that look like "SURFseq- Run-XXX".
+    var nonBlanks = cells.filter(function(v){ return v!==""; });
+    var isRunHdr  = nonBlanks.length===1 && cells[0]!=="" &&
+                    (cells[0].toUpperCase().indexOf("RUN")!==-1 ||
+                     cells[0].toUpperCase().indexOf("SURF")!==-1 ||
+                     cells[0].toUpperCase().indexOf("SEQ")!==-1);
+
+    // Fallback: if only col[0] has content and it's not a data row
+    if(!isRunHdr && nonBlanks.length===1 && cells[0]!=="" && curHeaders.length>0){
+      // Check it doesn't match any header (would be a data cell)
+      isRunHdr = true;
+    }
+
+    if(isRunHdr){
+      curRun = { runName:cells[0], sheetRowStart:sheetR, headers:[], rows:[] };
+      runs.push(curRun);
+      curHeaders = [];
+      relColIdx  = -1;
+      continue;
+    }
+
+    // ── Column header detection ───────────────────────────
+    var hasSnO = cells.some(function(v){ return v.toUpperCase()==="S.NO"; });
+    if(hasSnO){
+      curHeaders = cells.map(function(v,k){ return v!==""?v:("col"+k); });
+      relColIdx  = -1;
+      for(var k=0; k<curHeaders.length; k++){
+        if(curHeaders[k].trim().toUpperCase()==="REPORT RELEASE DATE"){
+          relColIdx=k; break;
+        }
+      }
+      // Attach headers to current run (may not have one yet — create default)
+      if(!curRun){
+        curRun = { runName:"(Unnamed Run)", sheetRowStart:sheetR, headers:[], rows:[] };
+        runs.push(curRun);
+      }
+      curRun.headers = curHeaders;
+      continue;
+    }
+
+    // ── Data row ─────────────────────────────────────────
+    if(curHeaders.length===0) continue; // no header found yet, skip
+
+    // Ensure we have a current run
+    if(!curRun){
+      curRun = { runName:"(Unnamed Run)", sheetRowStart:sheetR, headers:[], rows:[] };
+      runs.push(curRun);
+      curRun.headers = curHeaders;
+    }
+
+    // Build row object
+    var rowObj = {};
+    for(var k=0; k<curHeaders.length; k++){
+      rowObj[curHeaders[k]] = cells[k]!==undefined ? cells[k] : "";
+    }
+
+    // Release status: date column filled = released
+    var relVal     = relColIdx!==-1 ? (cells[relColIdx]||"").trim() : "";
+    var isReleased = relVal !== "";
+
+    // Physical hidden status: we can't read this from Sheets API v4 directly
+    // (it doesn't expose row visibility in values endpoint).
+    // We use the release date as the authoritative flag.
+    // The Apps Script fixOrphan will reconcile physical visibility.
+    rowObj["__rowIndex__"] = sheetR;
+    rowObj["__released__"] = isReleased;
+    rowObj["__hidden__"]   = isReleased; // treat released=hidden for display
+
+    curRun.rows.push(rowObj);
+  }
+
+  return runs;
+}
+
+// Build a merged unique header list across all runs for the Add Row modal
+function buildAllHeaders(){
+  var seen = {}, list = [];
+  S.runs.forEach(function(run){
+    run.headers.forEach(function(h){
+      if(!seen[h]){ seen[h]=true; list.push(h); }
+    });
+  });
+  S.allHeaders = list;
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER TABLE
+//  Renders run-header rows + col-header rows + data rows
+// ══════════════════════════════════════════════════════════
+function renderTable(){
+  var showRel = document.getElementById("togRel").checked;
+  var q       = document.getElementById("qbox").value.toLowerCase().trim();
+
+  // Collect all unique headers across all runs for thead
+  var allH = S.allHeaders;
+
+  // Build thead
+  var thead = "<tr class='col-hdr'>";
+  allH.forEach(function(h){ thead += "<th>"+esc(h)+"</th>"; });
+  thead += "<th style='min-width:130px'>ACTIONS</th></tr>";
+  document.getElementById("tHead").innerHTML = thead;
+
+  var html  = "";
+  var total = 0, released = 0;
+
+  S.runs.forEach(function(run){
+    // Filter rows for this run
+    var filteredRows = run.rows.filter(function(row){
+      if(!showRel && row["__hidden__"]) return false;
+      if(q){
+        var v = run.headers.map(function(h){ return String(row[h]||""); }).join(" ").toLowerCase();
+        if(!v.includes(q)) return false;
+      }
+      return true;
+    });
+
+    // Count stats across all rows (not filtered)
+    run.rows.forEach(function(r){
+      total++;
+      if(r["__hidden__"]) released++;
+    });
+
+    // Don't render the run block at all if no rows pass filter
+    if(filteredRows.length===0) return;
+
+    // ── Run header row ────────────────────────────────────
+    var visibleCount  = run.rows.filter(function(r){ return !r["__hidden__"]; }).length;
+    var releasedCount = run.rows.filter(function(r){ return r["__hidden__"]; }).length;
+    html += '<tr class="run-hdr"><td colspan="'+(allH.length+1)+'">'
+          + esc(run.runName)
+          + '<span class="run-pill">'+visibleCount+' active</span>'
+          + (releasedCount>0 ? '<span class="run-pill" style="margin-left:6px;background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:var(--ok)">'+releasedCount+' released</span>' : '')
+          + '</td></tr>';
+
+    // ── Data rows ─────────────────────────────────────────
+    filteredRows.forEach(function(row){
+      var rel = row["__hidden__"];
+      var ri  = row["__rowIndex__"];
+      html += '<tr class="'+(rel?"released":"")+'" data-ri="'+ri+'">';
+
+      allH.forEach(function(h, hi){
+        var val  = row[h]!==undefined ? row[h] : "";
+        var disp = esc(String(val));
+        var colU = h.trim().toUpperCase();
+        if(colU==="REPORT RELEASE DATE" && val)
+          disp = '<span style="color:var(--ok)">'+disp+'</span>';
+        var badge = (hi===0 && rel) ? '<span class="hbadge">HIDDEN IN SHEET</span>' : "";
+        html += '<td data-col="'+esc(h)+'" data-ri="'+ri+'">'+disp+badge+'</td>';
+      });
+
+      // Actions
+      html += '<td style="white-space:nowrap"><div class="actc">';
+      if(rel){
+        html += '<span style="color:var(--ok);font-size:11px">✓ Released</span>';
+      } else {
+        html += '<button class="be bsm" onclick="startEdit(this,'+ri+',\''+esc(JSON.stringify(run.headers))+'\')">✎ Edit</button>';
+        if(S.isAdmin)
+          html += '<button class="bk bsm" onclick="openRelease('+ri+')">⬆ Release</button>';
+        html += '<button class="bd bsm" onclick="openDel('+ri+')">✕</button>';
+      }
+      html += '</div></td></tr>';
+    });
+  });
+
+  if(html===""){
+    html = '<tr><td class="sc" colspan="'+(allH.length+1)+'">No records found</td></tr>';
+  }
+
+  document.getElementById("tBody").innerHTML = html;
+  document.getElementById("sT").textContent = total;
+  document.getElementById("sR").textContent = released;
+  document.getElementById("sA").textContent = total - released;
+}
+
+function updateStats(){
+  var total=0, rel=0;
+  S.runs.forEach(function(run){
+    run.rows.forEach(function(r){ total++; if(r["__hidden__"]) rel++; });
+  });
+  document.getElementById("sT").textContent = total;
+  document.getElementById("sR").textContent = rel;
+  document.getElementById("sA").textContent = total-rel;
+}
+
+function showErr(msg){
+  document.getElementById("tBody").innerHTML =
+    '<tr><td class="sc" colspan="30">⚠ '+esc(msg)+
+    '<br><small style="color:var(--muted);margin-top:8px;display:block">'+
+    'Check SHEET_ID, SHEETS_API_KEY, sheet is shared publicly, and Sheets API v4 is enabled.</small></td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════
+//  WRITE API  — Apps Script (write-only, no reads)
+// ══════════════════════════════════════════════════════════
+function writeAPI(payload, ms){
+  ms = ms||25000;
   var ctrl  = new AbortController();
   var timer = setTimeout(function(){ ctrl.abort(); }, ms);
-
-  return fetch(API, {
-    method : "POST",
-    body   : JSON.stringify(payload),
-    signal : ctrl.signal,
+  return fetch(APPS_SCRIPT_URL,{
+    method:"POST", body:JSON.stringify(payload), signal:ctrl.signal
   })
-  .then(function(r){
-    clearTimeout(timer);
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.text();
-  })
-  .then(function(txt){
-    // Strip any non-JSON prefix/suffix Apps Script might add
-    var clean = txt.replace(/^[^{[]*/, "").replace(/[^}\]]*$/, "");
+  .then(function(r){ clearTimeout(timer); if(!r.ok) throw new Error("HTTP "+r.status); return r.text(); })
+  .then(function(t){
+    var clean = t.replace(/^[^{[]*/,"").replace(/[^}\]]*$/,"");
     return JSON.parse(clean);
   })
   .catch(function(e){ clearTimeout(timer); throw e; });
 }
 
 // ══════════════════════════════════════════════════════════
-//  FETCH DATA
-//  silent=false → show full spinner (first load)
-//  silent=true  → keep table visible, just pulse the dot
-// ══════════════════════════════════════════════════════════
-function fetchData(silent) {
-  var pulse = document.getElementById("pulseEl");
-
-  if (!silent) {
-    document.getElementById("tHead").innerHTML = "";
-    document.getElementById("tBody").innerHTML =
-      '<tr><td class="state-cell" colspan="30"><div class="spinner"></div><br>Loading from Google Sheets…</td></tr>';
-    pulse.className = "pulse syncing";
-  } else {
-    pulse.className = "pulse syncing";
-  }
-
-  api({ action: "getData" }, 30000)
-    .then(function(res){
-      pulse.className = "pulse";
-      if (!res.success) {
-        toast("Load error: " + res.error, "err");
-        if (!silent) showError(res.error);
-        return;
-      }
-      S.headers = res.headers;
-      S.rows    = res.rows;
-      renderTable();
-      updateStats();
-      var now = new Date();
-      document.getElementById("refreshLbl").textContent =
-        "Updated " + now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-
-      // Orphan sync: silently ensure released rows are physically hidden.
-      // Runs once per admin session in background — no UI feedback needed.
-      if (res.orphans && res.orphans.length > 0 && S.isAdmin && !S.orphanFixed) {
-        S.orphanFixed = true;
-        (function fixSeq(list, idx) {
-          if (idx >= list.length) return;
-          api({ action:"fixOrphan", rowIndex:list[idx], token:S.token })
-            .then(function(){ fixSeq(list, idx + 1); })
-            .catch(function(){ fixSeq(list, idx + 1); });
-        })(res.orphans, 0);
-      }
-    })
-    .catch(function(e){
-      pulse.className = "pulse";
-      var msg = e.name === "AbortError"
-        ? "Timed out — check Apps Script URL & deployment."
-        : "Network error: " + e.message;
-      toast(msg, "err");
-      if (!silent) showError(msg);
-    });
-}
-
-function showError(msg) {
-  document.getElementById("tBody").innerHTML =
-    '<tr><td class="state-cell" colspan="30">⚠ ' + esc(msg) +
-    '<br><small style="color:var(--muted);margin-top:8px;display:block">Check: correct URL pasted in var API, deployed as "Anyone", "Execute as Me"</small></td></tr>';
-}
-
-// ══════════════════════════════════════════════════════════
-//  RENDER TABLE
-//  FIX: removed max-width/overflow from td styling.
-//  table-layout:auto + overflow-x:auto on wrapper is enough.
-// ══════════════════════════════════════════════════════════
-function renderTable() {
-  var showRel = document.getElementById("togReleased").checked;
-  var q       = document.getElementById("searchBox").value.toLowerCase().trim();
-
-  var filtered = S.rows.filter(function(row){
-    if (!showRel && row["__hidden__"]) return false;
-    if (q) {
-      var v = S.headers.map(function(h){ return String(row[h]||""); }).join(" ").toLowerCase();
-      if (!v.includes(q)) return false;
-    }
-    return true;
-  });
-
-  // Header
-  var hRow = "<tr>";
-  S.headers.forEach(function(h){ hRow += "<th>" + esc(h) + "</th>"; });
-  hRow += "<th style='min-width:130px'>ACTIONS</th></tr>";
-  document.getElementById("tHead").innerHTML = hRow;
-
-  // Body
-  if (filtered.length === 0) {
-    document.getElementById("tBody").innerHTML =
-      '<tr><td class="state-cell" colspan="' + (S.headers.length + 1) + '">No records found</td></tr>';
-    return;
-  }
-
-  var html = "";
-  filtered.forEach(function(row){
-    var rel = row["__hidden__"];
-    var ri  = row["__rowIndex__"];
-    html += '<tr class="' + (rel ? "released" : "") + '" data-ri="' + ri + '">';
-
-    S.headers.forEach(function(h, hi){
-      var val  = row[h] !== undefined ? row[h] : "";
-      var disp = esc(String(val));
-      var colU = h.trim().toUpperCase();
-
-      if (colU === "REPORT RELEASE DATE" && val) {
-        disp = '<span style="color:var(--success)">' + disp + '</span>';
-      }
-      var badge = (hi === 0 && rel) ? '<span class="hidden-badge">HIDDEN IN SHEET</span>' : "";
-
-      // td-clip only for columns that tend to have long text
-      var clipCols = ["REMARK","HISTORY WRITEUP","REPEAT EXPANSION","BIOINFO ANALYSIS TIME"];
-      var cls = clipCols.indexOf(colU) !== -1 ? ' class="td-clip"' : "";
-
-      html += '<td' + cls + ' data-col="' + esc(h) + '" data-ri="' + ri + '">'
-            + disp + badge + '</td>';
-    });
-
-    // Actions cell
-    html += '<td style="white-space:nowrap"><div class="act-cell">';
-    if (rel) {
-      html += '<span style="color:var(--success);font-size:11px;white-space:nowrap">✓ Released</span>';
-    } else {
-      html += '<button class="btn-edit btn-sm" onclick="startEdit(this,' + ri + ')">✎ Edit</button>';
-      if (S.isAdmin) {
-        html += '<button class="btn-green btn-sm" onclick="openRelease(' + ri + ')">⬆ Release</button>';
-      }
-      html += '<button class="btn-danger btn-sm" onclick="openDel(' + ri + ')">✕</button>';
-    }
-    html += '</div></td>';
-    html += '</tr>';
-  });
-
-  document.getElementById("tBody").innerHTML = html;
-}
-
-function updateStats() {
-  var total    = S.rows.length;
-  var released = S.rows.filter(function(r){ return r["__hidden__"]; }).length;
-  document.getElementById("sTotal").textContent    = total;
-  document.getElementById("sReleased").textContent = released;
-  document.getElementById("sActive").textContent   = total - released;
-}
-
-// ══════════════════════════════════════════════════════════
 //  INLINE EDIT
 // ══════════════════════════════════════════════════════════
-function startEdit(btn, rowIndex) {
-  var tr  = btn.closest("tr");
-  var row = S.rows.find(function(r){ return r["__rowIndex__"] === rowIndex; });
-  if (!tr || !row) return;
+function startEdit(btn, rowIndex, headersJson){
+  var tr      = btn.closest("tr");
+  var headers = JSON.parse(headersJson);
+  var row     = findRow(rowIndex);
+  if(!tr||!row) return;
 
   tr.querySelectorAll("td[data-col]").forEach(function(td){
     var colH = td.getAttribute("data-col");
-    var colU = colH.trim().toUpperCase();
-    if (colU === "REPORT RELEASE DATE") return; // locked
-    var val  = row[colH] !== undefined ? String(row[colH]) : "";
+    if(colH.trim().toUpperCase()==="REPORT RELEASE DATE") return;
+    var val  = row[colH]!==undefined ? String(row[colH]) : "";
     td.classList.add("editing");
-    td.innerHTML = '<input type="text" value="' + esc(val) + '" data-col="' + esc(colH) + '" />';
+    td.innerHTML = '<input type="text" value="'+esc(val)+'" data-col="'+esc(colH)+'"/>';
   });
 
-  var actCell = tr.querySelector(".act-cell");
-  actCell.innerHTML =
-    '<button class="btn-accent btn-sm" onclick="saveEdit(this,' + rowIndex + ')">✓ Save</button>' +
-    '<button class="btn-ghost  btn-sm" onclick="renderTable()">Cancel</button>';
+  var ac = tr.querySelector(".actc");
+  ac.innerHTML =
+    '<button class="ba bsm" onclick="saveEdit(this,'+rowIndex+')">✓ Save</button>'+
+    '<button class="bg bsm" onclick="renderTable()">Cancel</button>';
 }
 
-function saveEdit(btn, rowIndex) {
-  var tr     = btn.closest("tr");
-  var inputs = tr.querySelectorAll("td.editing input");
+function saveEdit(btn, rowIndex){
+  var tr      = btn.closest("tr");
+  var inputs  = tr.querySelectorAll("td.editing input");
   var changes = [];
-  inputs.forEach(function(inp){
-    changes.push({ col: inp.getAttribute("data-col"), val: inp.value });
-  });
-  if (!changes.length) { renderTable(); return; }
-
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  inputs.forEach(function(i){ changes.push({col:i.getAttribute("data-col"),val:i.value}); });
+  if(!changes.length){ renderTable(); return; }
+  btn.disabled=true; btn.textContent="Saving…";
 
   Promise.all(changes.map(function(c){
-    return api({ action:"updateCell", rowIndex:rowIndex, colHeader:c.col, value:c.val });
+    return writeAPI({action:"updateCell",rowIndex:rowIndex,colHeader:c.col,value:c.val});
   }))
   .then(function(results){
     var failed = results.filter(function(r){ return !r.success; });
-    if (failed.length) {
-      toast("Some cells failed: " + failed.map(function(f){ return f.error; }).join(", "), "err");
-    } else {
-      toast("Row saved ✓", "ok");
-    }
+    if(failed.length) toast("Some cells failed: "+failed.map(function(f){return f.error;}).join(", "),"err");
+    else toast("Row saved ✓","ok");
+    // Update local state
     changes.forEach(function(c){
-      var row = S.rows.find(function(r){ return r["__rowIndex__"] === rowIndex; });
-      if (row) row[c.col] = c.val;
+      var row = findRow(rowIndex);
+      if(row) row[c.col] = c.val;
     });
     renderTable();
   })
-  .catch(function(e){ toast("Save error: " + e.message, "err"); renderTable(); });
+  .catch(function(e){ toast("Save error: "+e.message,"err"); renderTable(); });
 }
 
 // ══════════════════════════════════════════════════════════
 //  ADD ROW
 // ══════════════════════════════════════════════════════════
-function openAdd() {
-  var html = "";
-  S.headers.forEach(function(h){
-    if (h.trim().toUpperCase() === "REPORT RELEASE DATE") return;
+function openAdd(){
+  var html="";
+  S.allHeaders.forEach(function(h){
+    if(h.trim().toUpperCase()==="REPORT RELEASE DATE") return;
     var safe = h.replace(/[^a-zA-Z0-9]/g,"_");
-    html += '<div class="fgroup"><label>' + esc(h) + '</label>'
-          + '<input type="text" id="af_' + safe + '" data-col="' + esc(h) + '" placeholder="optional" /></div>';
+    html += '<div class="fg"><label>'+esc(h)+'</label>'+
+            '<input type="text" id="af_'+safe+'" data-col="'+esc(h)+'" placeholder="optional"/></div>';
   });
-  document.getElementById("addFields").innerHTML = html || "<p style='color:var(--muted)'>No columns found.</p>";
-  document.getElementById("adderr").textContent = "";
-  document.getElementById("addOverlay").classList.remove("off");
+  document.getElementById("addFields").innerHTML = html||"<p style='color:var(--muted)'>No columns found.</p>";
+  document.getElementById("adderr").textContent="";
+  document.getElementById("addOv").classList.remove("off");
 }
-function closeAdd() { document.getElementById("addOverlay").classList.add("off"); }
-function confirmAdd() {
-  var rowData = {};
+function closeAdd(){ document.getElementById("addOv").classList.add("off"); }
+function confirmAdd(){
+  var rowData={};
   document.querySelectorAll("#addFields input[data-col]").forEach(function(i){
     rowData[i.getAttribute("data-col")] = i.value;
   });
-  document.getElementById("adderr").textContent = "Adding…";
-  api({ action:"addRow", rowData:rowData })
+  document.getElementById("adderr").textContent="Adding…";
+  writeAPI({action:"addRow",rowData:rowData})
     .then(function(res){
-      if (res.success) { closeAdd(); toast("Row added ✓", "ok"); fetchData(true); }
-      else document.getElementById("adderr").textContent = res.error || "Failed";
+      if(res.success){ closeAdd(); toast("Row added ✓","ok"); fetchData(true); }
+      else document.getElementById("adderr").textContent = res.error||"Failed";
     })
-    .catch(function(e){ document.getElementById("adderr").textContent = e.message; });
+    .catch(function(e){ document.getElementById("adderr").textContent=e.message; });
 }
 
 // ══════════════════════════════════════════════════════════
 //  DELETE ROW
 // ══════════════════════════════════════════════════════════
-function rowInfoHtml(row) {
-  var info = "";
-  ["S.NO","Sample_Name","Gen_ID","Anderson_ID","Client","Test"].forEach(function(k){
-    if (row && row[k] !== undefined && String(row[k]).trim() !== "")
-      info += "<b>" + esc(k) + ":</b> " + esc(String(row[k])) + "<br>";
-  });
-  if (!info && row) {
-    S.headers.slice(0,4).forEach(function(k){
-      if (!k.startsWith("__")) info += "<b>" + esc(k) + ":</b> " + esc(String(row[k]||"")) + "<br>";
-    });
-  }
-  return info || "—";
-}
-
-function openDel(rowIndex) {
-  var row = S.rows.find(function(r){ return r["__rowIndex__"] === rowIndex; });
-  S.pending = { rowIndex:rowIndex, row:row };
+function openDel(rowIndex){
+  var row = findRow(rowIndex);
+  S.pending = {rowIndex:rowIndex, row:row};
   document.getElementById("delInfo").innerHTML = rowInfoHtml(row);
-  document.getElementById("delerr").textContent = "";
-  document.getElementById("delOverlay").classList.remove("off");
+  document.getElementById("delerr").textContent="";
+  document.getElementById("delOv").classList.remove("off");
 }
-function closeDel() { document.getElementById("delOverlay").classList.add("off"); S.pending = null; }
-function confirmDelete() {
-  if (!S.pending) return;
-  document.getElementById("delerr").textContent = "Deleting…";
-  api({ action:"deleteRow", rowIndex:S.pending.rowIndex })
+function closeDel(){ document.getElementById("delOv").classList.add("off"); S.pending=null; }
+function confirmDelete(){
+  if(!S.pending) return;
+  document.getElementById("delerr").textContent="Deleting…";
+  writeAPI({action:"deleteRow",rowIndex:S.pending.rowIndex})
     .then(function(res){
-      if (res.success) {
-        // Optimistic: remove from local state immediately
-        S.rows = S.rows.filter(function(r){ return r["__rowIndex__"] !== S.pending.rowIndex; });
-        closeDel();
-        renderTable(); updateStats();
-        toast("Row deleted", "ok");
-        fetchData(true); // sync in background
+      if(res.success){
+        // Optimistic: remove from local state
+        S.runs.forEach(function(run){
+          run.rows = run.rows.filter(function(r){ return r["__rowIndex__"]!==S.pending.rowIndex; });
+        });
+        closeDel(); renderTable(); updateStats();
+        toast("Row deleted","ok");
+        fetchData(true);
       } else {
-        document.getElementById("delerr").textContent = res.error || "Failed";
+        document.getElementById("delerr").textContent = res.error||"Failed";
       }
     })
-    .catch(function(e){ document.getElementById("delerr").textContent = e.message; });
+    .catch(function(e){ document.getElementById("delerr").textContent=e.message; });
 }
 
 // ══════════════════════════════════════════════════════════
-//  RELEASE REPORT
-//  FIX: Optimistic UI — mark the row as released in local
-//  state IMMEDIATELY on confirm click, close the modal and
-//  re-render at once. The API call runs in the background.
-//  If it fails, we roll back and show an error toast.
+//  RELEASE  — optimistic UI, background API call
 // ══════════════════════════════════════════════════════════
-function openRelease(rowIndex) {
-  var row = S.rows.find(function(r){ return r["__rowIndex__"] === rowIndex; });
-  S.pending = { rowIndex:rowIndex, row:row };
+function openRelease(rowIndex){
+  var row = findRow(rowIndex);
+  S.pending = {rowIndex:rowIndex, row:row};
   document.getElementById("relInfo").innerHTML = rowInfoHtml(row);
   var t = new Date();
   document.getElementById("relDate").value =
-    t.getFullYear() + "-" + pad(t.getMonth()+1) + "-" + pad(t.getDate());
-  document.getElementById("relerr").textContent = "";
-  var cb = document.getElementById("relConfirmBtn");
-  cb.disabled = false;
-  cb.className = "btn-green";
-  cb.textContent = "✓ Confirm Release";
-  document.getElementById("relOverlay").classList.remove("off");
+    t.getFullYear()+"-"+pad(t.getMonth()+1)+"-"+pad(t.getDate());
+  document.getElementById("relerr").textContent="";
+  document.getElementById("relBtn").disabled=false;
+  document.getElementById("relBtn").textContent="✓ Confirm Release";
+  document.getElementById("relOv").classList.remove("off");
 }
-function closeRelease() { document.getElementById("relOverlay").classList.add("off"); S.pending = null; }
+function closeRelease(){ document.getElementById("relOv").classList.add("off"); S.pending=null; }
 
-function confirmRelease() {
-  if (!S.pending) return;
+function confirmRelease(){
+  if(!S.pending) return;
   var dv = document.getElementById("relDate").value;
-  if (!dv) { document.getElementById("relerr").textContent = "Please pick a date."; return; }
+  if(!dv){ document.getElementById("relerr").textContent="Please pick a date."; return; }
+  var pts = dv.split("-");
+  var fmt = pts[2]+"-"+pts[1]+"-"+pts[0]; // DD-MM-YYYY
 
-  var parts = dv.split("-");
-  var fmt   = parts[2] + "-" + parts[1] + "-" + parts[0]; // DD-MM-YYYY
+  var btn = document.getElementById("relBtn");
+  btn.disabled=true; btn.textContent="Releasing…";
 
-  var cb = document.getElementById("relConfirmBtn");
-  cb.disabled = true;
-  cb.textContent = "Releasing…";
+  var ri  = S.pending.rowIndex;
+  var row = findRow(ri);
 
-  var ri      = S.pending.rowIndex;
-  var colRel  = "REPORT RELEASE DATE";
+  // ── Optimistic update — instant UI ───────────────────
+  var prevHidden   = row ? row["__hidden__"]   : false;
+  var prevReleased = row ? row["__released__"] : false;
+  var relColName   = findRelColName();
+  var prevDate     = row && relColName ? row[relColName] : "";
 
-  // ── OPTIMISTIC UPDATE ─────────────────────────────────
-  // Mark row as hidden + set date in local state right now,
-  // close modal, re-render — UI feels instant.
-  var row = S.rows.find(function(r){ return r["__rowIndex__"] === ri; });
-  var prevHidden = row ? row["__hidden__"] : false;
-  var prevDate   = row ? row[colRel] : "";
-  if (row) {
-    row["__hidden__"] = true;
-    // find the actual release date column name (case-insensitive)
-    S.headers.forEach(function(h){
-      if (h.trim().toUpperCase() === colRel) row[h] = fmt;
-    });
+  if(row){
+    row["__hidden__"]   = true;
+    row["__released__"] = true;
+    if(relColName) row[relColName] = fmt;
   }
-
   closeRelease();
-  renderTable();
-  updateStats();
-  toast("Releasing report…", "ok");
+  renderTable(); updateStats();
+  toast("Releasing report…","ok");
 
-  // ── BACKGROUND API CALL ───────────────────────────────
-  api({ action:"releaseReport", rowIndex:ri, releaseDate:fmt, token:S.token }, 30000)
+  // ── Background write ─────────────────────────────────
+  writeAPI({action:"releaseReport",rowIndex:ri,releaseDate:fmt,token:S.token}, 30000)
     .then(function(res){
-      if (res.success) {
-        toast("Report released & hidden in sheet ✓", "ok");
-        fetchData(true); // sync row index updates (deletions can shift rows)
+      if(res.success){
+        toast("Report released & hidden in sheet ✓","ok");
+        fetchData(true);
       } else {
-        // Roll back optimistic update
-        if (row) { row["__hidden__"] = prevHidden; row[colRel] = prevDate; }
+        // Rollback
+        if(row){
+          row["__hidden__"]   = prevHidden;
+          row["__released__"] = prevReleased;
+          if(relColName) row[relColName] = prevDate;
+        }
         renderTable(); updateStats();
-        toast("Release failed: " + (res.error || "Unknown error"), "err");
+        toast("Release failed: "+(res.error||"Unknown"),"err");
       }
     })
     .catch(function(e){
-      if (row) { row["__hidden__"] = prevHidden; row[colRel] = prevDate; }
+      if(row){
+        row["__hidden__"]   = prevHidden;
+        row["__released__"] = prevReleased;
+        if(relColName) row[relColName] = prevDate;
+      }
       renderTable(); updateStats();
-      toast("Release error: " + e.message, "err");
+      toast("Release error: "+e.message,"err");
     });
 }
 
 // ══════════════════════════════════════════════════════════
 //  LOGIN / LOGOUT
 // ══════════════════════════════════════════════════════════
-function openLogin()  { document.getElementById("loginOverlay").classList.remove("off"); document.getElementById("lid").focus(); }
-function closeLogin() { document.getElementById("loginOverlay").classList.add("off"); document.getElementById("lerr").textContent=""; }
+function openLogin(){ document.getElementById("loginOv").classList.remove("off"); document.getElementById("lid").focus(); }
+function closeLogin(){ document.getElementById("loginOv").classList.add("off"); document.getElementById("lerr").textContent=""; }
 
-function doLogin() {
-  var id = document.getElementById("lid").value.trim();
-  var pw = document.getElementById("lpw").value;
-  document.getElementById("lerr").textContent = "Verifying…";
-  api({ action:"login", id:id, password:pw }, 12000)
+function doLogin(){
+  var id=document.getElementById("lid").value.trim();
+  var pw=document.getElementById("lpw").value;
+  document.getElementById("lerr").textContent="Verifying…";
+  writeAPI({action:"login",id:id,password:pw},12000)
     .then(function(res){
-      if (res.success) {
-        S.isAdmin = true; S.token = res.token;
+      if(res.success){
+        S.isAdmin=true; S.token=res.token;
         closeLogin();
-        document.getElementById("userBadge").textContent = "ADMIN";
-        document.getElementById("userBadge").classList.add("admin");
-        document.getElementById("authBtn").textContent = "Logout";
-        document.getElementById("authBtn").onclick = doLogout;
+        document.getElementById("ubadge").textContent="ADMIN";
+        document.getElementById("ubadge").classList.add("admin");
+        document.getElementById("authBtn").textContent="Logout";
+        document.getElementById("authBtn").onclick=doLogout;
         renderTable();
-        toast("Logged in as Admin ✓", "ok");
+        toast("Logged in as Admin ✓","ok");
       } else {
-        document.getElementById("lerr").textContent = res.error || "Invalid credentials";
+        document.getElementById("lerr").textContent=res.error||"Invalid credentials";
       }
     })
     .catch(function(e){
-      document.getElementById("lerr").textContent = e.name==="AbortError" ? "Timed out" : e.message;
+      document.getElementById("lerr").textContent=e.name==="AbortError"?"Timed out":e.message;
     });
 }
 
-function doLogout() {
-  S.isAdmin = false; S.token = null; S.orphanFixed = false;
-  document.getElementById("userBadge").textContent = "GUEST";
-  document.getElementById("userBadge").classList.remove("admin");
-  document.getElementById("authBtn").textContent = "Admin Login";
-  document.getElementById("authBtn").onclick = openLogin;
+function doLogout(){
+  S.isAdmin=false; S.token=null; S.orphanFixed=false;
+  document.getElementById("ubadge").textContent="GUEST";
+  document.getElementById("ubadge").classList.remove("admin");
+  document.getElementById("authBtn").textContent="Admin Login";
+  document.getElementById("authBtn").onclick=openLogin;
   renderTable();
-  toast("Logged out", "ok");
-}
-
-// ══════════════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════════════
-function toast(msg, type) {
-  var el = document.createElement("div");
-  el.className = "toast " + (type||"");
-  el.innerHTML = (type==="ok" ? "✓" : "✕") + "&nbsp;" + esc(msg);
-  document.getElementById("toasts").appendChild(el);
-  setTimeout(function(){ el.remove(); }, 4200);
+  toast("Logged out","ok");
 }
 
 // ══════════════════════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════════════════════
-function esc(s) {
-  return String(s)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+function findRow(rowIndex){
+  for(var i=0;i<S.runs.length;i++){
+    var r = S.runs[i].rows.find(function(r){ return r["__rowIndex__"]===rowIndex; });
+    if(r) return r;
+  }
+  return null;
+}
+
+function findRelColName(){
+  for(var i=0;i<S.allHeaders.length;i++){
+    if(S.allHeaders[i].trim().toUpperCase()==="REPORT RELEASE DATE") return S.allHeaders[i];
+  }
+  return null;
+}
+
+function rowInfoHtml(row){
+  if(!row) return "—";
+  var info="";
+  ["S.NO","Sample_Name","Gen_ID","Anderson_ID","Client","Test"].forEach(function(k){
+    if(row[k]!==undefined && String(row[k]).trim()!=="")
+      info += "<b>"+esc(k)+":</b> "+esc(String(row[k]))+"<br>";
+  });
+  if(!info){
+    var keys = Object.keys(row).filter(function(k){ return !k.startsWith("__"); }).slice(0,4);
+    keys.forEach(function(k){ info += "<b>"+esc(k)+":</b> "+esc(String(row[k]||""))+"<br>"; });
+  }
+  return info||"—";
+}
+
+function toast(msg, type){
+  var el = document.createElement("div");
+  el.className="toast "+(type||"");
+  el.innerHTML=(type==="ok"?"✓":"✕")+"&nbsp;"+esc(msg);
+  document.getElementById("toasts").appendChild(el);
+  setTimeout(function(){ el.remove(); }, 4200);
+}
+
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
     .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
-function pad(n){ return n < 10 ? "0"+n : ""+n; }
+function pad(n){ return n<10?"0"+n:""+n; }
 </script>
 </body>
 </html>
