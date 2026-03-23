@@ -456,11 +456,12 @@ var API = "https://script.google.com/macros/s/AKfycbzioALRQDTRrYnUwXsRzX6rUuiYV1
 //  STATE
 // ══════════════════════════════════════════════════════════
 var S = {
-  isAdmin : false,
-  token   : null,
-  headers : [],
-  rows    : [],
-  pending : null,
+  isAdmin     : false,
+  token       : null,
+  headers     : [],
+  rows        : [],
+  pending     : null,
+  orphanFixed : false,  // true after first orphan-fix pass per session
 };
 var REFRESH_MS = 30000;
 
@@ -540,27 +541,16 @@ function fetchData(silent) {
       document.getElementById("refreshLbl").textContent =
         "Updated " + now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
 
-      // ── Orphan recovery ────────────────────────────────────
-      // getData() returns rows that have a release date written
-      // but were NOT hidden (can happen if the tab was closed
-      // right after the date write but before the hide call).
-      // If admin is logged in, auto-fix them silently.
-      // If guest, show an info notice.
-      if (res.orphans && res.orphans.length > 0) {
-        if (S.isAdmin) {
-          res.orphans.forEach(function(ri){
-            api({ action:"fixOrphan", rowIndex:ri, token:S.token })
-              .then(function(fix){
-                if (fix.success) {
-                  toast("Auto-fixed incomplete release on row " + ri, "ok");
-                  fetchData(true);
-                }
-              })
-              .catch(function(){});
-          });
-        } else {
-          toast(res.orphans.length + " report(s) have a release date but are still visible. Ask admin to log in to auto-fix.", "err");
-        }
+      // Orphan sync: silently ensure released rows are physically hidden.
+      // Runs once per admin session in background — no UI feedback needed.
+      if (res.orphans && res.orphans.length > 0 && S.isAdmin && !S.orphanFixed) {
+        S.orphanFixed = true;
+        (function fixSeq(list, idx) {
+          if (idx >= list.length) return;
+          api({ action:"fixOrphan", rowIndex:list[idx], token:S.token })
+            .then(function(){ fixSeq(list, idx + 1); })
+            .catch(function(){ fixSeq(list, idx + 1); });
+        })(res.orphans, 0);
       }
     })
     .catch(function(e){
@@ -896,7 +886,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  S.isAdmin = false; S.token = null;
+  S.isAdmin = false; S.token = null; S.orphanFixed = false;
   document.getElementById("userBadge").textContent = "GUEST";
   document.getElementById("userBadge").classList.remove("admin");
   document.getElementById("authBtn").textContent = "Admin Login";
